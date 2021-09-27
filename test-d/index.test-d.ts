@@ -1,6 +1,6 @@
-import { expectError, expectType, expectNotType } from 'tsd';
+import {expectError, expectType, expectNotType} from 'tsd';
 
-import { ModelAction, Commands, ModelState, Result } from '../src';
+import {ModelAction, Commands, ModelState, Result} from '../src';
 
 declare function fetchTodos(): Promise<Todo[]>;
 
@@ -11,7 +11,7 @@ type Todo = {
   status: 'todo' | 'doing' | 'done';
 };
 
-type TodoModel = {
+export type TodoModel = {
   namespace: 'todo';
 
   state: {
@@ -19,12 +19,12 @@ type TodoModel = {
   };
 
   reducers: {
-    set(state: never, action: { payload: Todo[] }): TodoState;
-    add(state: TodoState, action: { payload: Todo }): TodoState;
+    set(state: never, action: {payload: Todo[]}): TodoState;
+    add(state: TodoState, action: {payload: Todo}): TodoState;
   };
 
   effects: {
-    fetch(_: never, { call, put }: Commands<TodoModel>): void;
+    fetch(_: never, commands: Commands<TodoModel>): void;
   };
 };
 
@@ -40,7 +40,7 @@ const todoModel: TodoModel = {
   },
 
   reducers: {
-    set(_, { payload }) {
+    set(_, {payload}) {
       /**
        * never
        */
@@ -50,9 +50,9 @@ const todoModel: TodoModel = {
        */
       expectType<Todo[]>(payload);
 
-      return { todos: payload };
+      return {todos: payload};
     },
-    add({ todos }, { payload }) {
+    add({todos}, {payload}) {
       /**
        * payload type of reducer
        */
@@ -65,7 +65,7 @@ const todoModel: TodoModel = {
   },
 
   effects: {
-    *fetch(_, { call, put }) {
+    *fetch(_, {call, put}) {
       /**
        * never
        */
@@ -82,18 +82,22 @@ const todoModel: TodoModel = {
       /**
        * action type of put
        */
-      expectError(put({
-        type: 'sett',
-        payload: todos,
-      }));
+      expectError(
+        put({
+          type: 'sett',
+          payload: todos,
+        })
+      );
 
       /**
        * action type of put
        */
-      expectError(put({
-        type: 'set',
-        payload: 123,
-      }));
+      expectError(
+        put({
+          type: 'set',
+          payload: 123,
+        })
+      );
     },
   },
 };
@@ -102,22 +106,22 @@ const todoModel: TodoModel = {
  * return type of reducer
  */
 declare const n: never;
-expectType<{ todos: Todo[] }>(todoModel.reducers.set(n, { payload: [] }));
+expectType<{todos: Todo[]}>(todoModel.reducers.set(n, {payload: []}));
 
 /**
  * action type
  */
 declare const todoAction: TodoAction;
 expectType<
-  { type: 'todo/set'; payload: Todo[] }
-  | { type: 'todo/add'; payload: Todo }
-  | { type: 'todo/fetch' }
+  | {type: 'set'; payload: Todo[]}
+  | {type: 'add'; payload: Todo}
+  | {type: 'todo/fetch'}
 >(todoAction);
-expectNotType<{ type: 'todo/set'; payload: Todo[] }>(todoAction);
+expectNotType<{type: 'todo/set'; payload: Todo[]}>(todoAction);
 
 /**
  * state type
  */
 declare const todoState: TodoState;
-expectType<{ todos: Todo[] }>(todoState);
-expectNotType<{ todos: Todo }>(todoState);
+expectType<{todos: Todo[]}>(todoState);
+expectNotType<{todos: Todo}>(todoState);

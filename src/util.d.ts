@@ -1,48 +1,81 @@
+export interface Model {
+  state: any;
+  namespace: string;
+  reducers: {[k: string]: (...args: any[]) => any};
+  effects?: {[k: string]: ((...args: any[]) => any) | any[]};
+}
+
+export type UnionToIntersection<U> = (
+  U extends any ? (k: U) => void : never
+) extends (k: infer I) => void
+  ? I
+  : never;
+
+export type ValueType<T extends Record<any, any>> = T[keyof T];
+
 /**
  * 获取函数第一个参数的payload类型
  */
-export type FirstPayload<F> = F extends (first: infer S, second: never) => any ? S extends never ? 1 : S extends { payload: any } ? S['payload'] : never : never;
+export type FirstPayload<F> = F extends (first: infer S, second: never) => any
+  ? S extends never
+    ? 1
+    : S extends {payload: any}
+    ? S['payload']
+    : never
+  : never;
 
 /**
-* 获取函数第二个参数的payload类型
-*/
-export type SecondPayload<F> = F extends (first: never, second: infer S) => any ? S extends never ? never : S extends { payload: any } ? S['payload'] : never : never;
+ * 获取函数第二个参数的payload类型
+ */
+export type SecondPayload<F> = F extends (first: never, second: infer S) => any
+  ? S extends never
+    ? never
+    : S extends {payload: any}
+    ? S['payload']
+    : never
+  : never;
 
 /**
-* 获取函数的参数类型
-*/
+ * 获取函数的参数类型
+ */
 export type Args<T> = T extends (...args: infer A) => any ? A : never;
 
 /**
-* 获取函数的第二个参数以后的参数类型
-*/
-export type ArgsWithoutFirst<T> = T extends (_: any, ...args: infer A) => any ? A : never;
+ * 获取函数的第二个参数以后的参数类型
+ */
+export type ArgsWithoutFirst<T> = T extends (_: any, ...args: infer A) => any
+  ? A
+  : never;
 
 /**
-* 过滤掉never类型的type
-*/
-export type WithoutNever<T> = Pick<T, { [k in keyof T]: T[k] extends never ? never : k }[keyof T]>;
+ * 过滤掉never类型的type
+ */
+export type WithoutNever<T> = Pick<
+  T,
+  {[k in keyof T]: T[k] extends never ? never : k}[keyof T]
+>;
 
 /**
-* 生成当前model内需要的action类型
-* 用于model内部做类型限定
-*/
+ * 生成当前model内需要的action类型
+ * 用于model内部做类型限定
+ */
 export type GenerateActionInner<
-  Namespace extends string,
-  Reducers extends { [k: string]: (...arg: any[]) => any },
-  Effects extends { [k: string]: ((...arg: any[]) => any) | any[] } = Record<string, never>,
+  M extends Model,
   OuterActions extends any[] = never[]
-  > = {
-    // 从reducer生成action type
-    [k in keyof Reducers]: WithoutNever<{
-      // eslint-disable-next-line prettier/prettier
-      type: Namespace extends '' ? k : `${Namespace}/${string & k}`;
-      payload: SecondPayload<Reducers[k]>;
-    }>;
-  }[keyof Reducers] | {
-    // 从effect生成action type
-    [k in keyof Effects]: WithoutNever<{
-      type: Namespace extends '' ? k : `${Namespace}/${string & k}`;
-      payload: Effects[k] extends any[] ? FirstPayload<Effects[k][0]> : FirstPayload<Effects[k]>;
-    }>
-  }[keyof Effects] | OuterActions[number]; // 外加外部的一些action
+> =
+  | GenerateActionByField<M, 'reducers'>
+  | GenerateActionByField<M, 'effects'>
+  | OuterActions[number]; // 外加外部的一些action
+
+export type GenerateActionByField<
+  M extends Model,
+  F extends 'effects' | 'reducers'
+> = {
+  // 从effect生成action type
+  [k in keyof M[F]]: WithoutNever<{
+    type: F extends 'reducers' ? k : `${M['namespace']}/${string & k}`;
+    payload: F extends 'effects'
+      ? FirstPayload<M[F][k]>
+      : SecondPayload<M[F][k]>;
+  }>;
+}[keyof M[F]];
